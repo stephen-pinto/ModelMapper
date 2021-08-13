@@ -11,19 +11,19 @@ namespace ModelMapper
     {
         #region Internal class
 
-        public interface IPropertyMapperConfigBase
+        public interface IModelMapperConfigBase
         {
             object DefaultValue { get; }
         }
 
-        public interface IPropertyMapperConfig<BType, OType, CType> : IPropertyMapperConfigBase
+        public interface IModelMapperConfig<BType, OType, CType> : IModelMapperConfigBase
         {
-            IPropertyMapperConfig<BType, OType, CType> SetDefaultValue(BType value);
-            IPropertyMapperConfig<BType, OType, CType> SetTypedValueConverter(Func<BType, OType> converter);
-            IPropertyMapperConfig<BType, OType, CType> SetObjectValueConverter(Func<CType, OType> converter);
+            IModelMapperConfig<BType, OType, CType> SetDefaultValue(BType value);
+            IModelMapperConfig<BType, OType, CType> SetTypedValueConverter(Func<BType, OType> converter);
+            IModelMapperConfig<BType, OType, CType> SetObjectValueConverter(Func<CType, OType> converter);
         }
 
-        internal class PropertyMapperConfig<BType, OType, CType> : IPropertyMapperConfig<BType, OType, CType>
+        internal class ModelMapperConfig<BType, OType, CType> : IModelMapperConfig<BType, OType, CType>
         {
             //BType: Base  type 
             //OType: Other type
@@ -33,24 +33,24 @@ namespace ModelMapper
             public Func<BType, OType> ValueConverter1 { get; set; }
             public Func<CType, OType> ValueConverter2 { get; set; }
 
-            public PropertyMapperConfig(string propertyName)
+            public ModelMapperConfig(string propertyName)
             {
                 PropertyName = propertyName;
             }
 
-            public IPropertyMapperConfig<BType, OType, CType> SetDefaultValue(BType value)
+            public IModelMapperConfig<BType, OType, CType> SetDefaultValue(BType value)
             {
                 DefaultValue = value;
                 return this;
             }
 
-            public IPropertyMapperConfig<BType, OType, CType> SetTypedValueConverter(Func<BType, OType> converter)
+            public IModelMapperConfig<BType, OType, CType> SetTypedValueConverter(Func<BType, OType> converter)
             {
                 ValueConverter1 = converter;
                 return this;
             }
 
-            public IPropertyMapperConfig<BType, OType, CType> SetObjectValueConverter(Func<CType, OType> converter)
+            public IModelMapperConfig<BType, OType, CType> SetObjectValueConverter(Func<CType, OType> converter)
             {
                 ValueConverter2 = converter;
                 return this;
@@ -59,11 +59,11 @@ namespace ModelMapper
 
         #endregion
 
-        public Dictionary<string, IPropertyMapperConfigBase> _propertyConfig;
+        public Dictionary<string, IModelMapperConfigBase> _propertyConfig;
 
         public ModelMapperBiDir()
         {
-            _propertyConfig = new Dictionary<string, IPropertyMapperConfigBase>();
+            _propertyConfig = new Dictionary<string, IModelMapperConfigBase>();
         }
 
         public ModelMapperBiDir<T1, T2> Add<BType>(Expression<Func<BType>> expr1, Expression<Func<BType>> expr2)
@@ -91,8 +91,8 @@ namespace ModelMapper
         public ModelMapperBiDir<T1, T2> Add<BType, OType>(
             Expression<Func<T1, BType>> expr1,  //Property 1
             Expression<Func<T2, OType>> expr2,  //Proeprty 2
-            Action<IPropertyMapperConfig<BType, OType, T1>> config1, //Configuration 1
-            Action<IPropertyMapperConfig<OType, BType, T2>> config2) //Configuration 2
+            Action<IModelMapperConfig<BType, OType, T1>> config1, //Configuration 1
+            Action<IModelMapperConfig<OType, BType, T2>> config2) //Configuration 2
         {
             if (config1 == null && config2 == null)
                 throw new ArgumentException($"Mandatory paramters {nameof(config1)} or {nameof(config2)} cannot be left null");
@@ -102,7 +102,7 @@ namespace ModelMapper
             var propName1 = memExprssn1.Member.Name;
             if (config1 != null)
             {
-                var props1 = new PropertyMapperConfig<BType, OType, T1>(propName1);
+                var props1 = new ModelMapperConfig<BType, OType, T1>(propName1);
                 config1(props1);
                 _propertyConfig.Add("T1_" + propName1, props1);
             }
@@ -112,7 +112,7 @@ namespace ModelMapper
             var propName2 = memExprssn2.Member.Name;
             if (config2 != null)
             {
-                var props2 = new PropertyMapperConfig<OType, BType, T2>(propName2);
+                var props2 = new ModelMapperConfig<OType, BType, T2>(propName2);
                 config2(props2);
                 _propertyConfig.Add("T2_" + propName2, props2);
             }
@@ -146,7 +146,7 @@ namespace ModelMapper
                         throw new InvalidOperationException($"No configuration defined for {prop1.Name}");
 
                     //Get strong PropertyMapperType
-                    var strongConfigType = typeof(PropertyMapperConfig<,,>).MakeGenericType(typeof(T1), typeof(T2), propType1, propType2, typeof(T1));
+                    var strongConfigType = typeof(ModelMapperConfig<,,>).MakeGenericType(typeof(T1), typeof(T2), propType1, propType2, typeof(T1));
 
                     var value = GetConvertedValue(prop1, strongConfigType, sourceObj, _propertyConfig[key]);
 
@@ -182,7 +182,7 @@ namespace ModelMapper
                         throw new InvalidOperationException($"No configuration defined for {prop1.Name}");
 
                     //Get strong PropertyMapperType
-                    var strongConfigType = typeof(PropertyMapperConfig<,,>).MakeGenericType(typeof(T1), typeof(T2), propType1, propType2, typeof(T2));
+                    var strongConfigType = typeof(ModelMapperConfig<,,>).MakeGenericType(typeof(T1), typeof(T2), propType1, propType2, typeof(T2));
 
                     var value = GetConvertedValue(prop1, strongConfigType, sourceObj, _propertyConfig[key]);
 
