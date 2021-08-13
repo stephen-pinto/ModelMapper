@@ -62,7 +62,7 @@ namespace ModelMapper
             }
             else
             {
-                //Throw error here
+                throw new NotSupportedException($"{nameof(Type1)} not supported yet");
             }
 
             return targetMember;
