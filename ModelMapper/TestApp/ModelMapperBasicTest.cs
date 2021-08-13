@@ -21,18 +21,22 @@ namespace TestApp
                 E = 11.10M
             };
 
-            ModelTwo y = new ModelTwo() { N = "fasss" };
+            ModelTwo y = new ModelTwo() 
+            { 
+                N = "fasss" 
+            };
 
             Console.WriteLine($"Before changes: \nX:\n{x} \nY:\n{y}\n");
 
             ModelMapperBasic<ModelOne, ModelTwo> umapper = new ModelMapperBasic<ModelOne, ModelTwo>();
             umapper.Add(f => f.A, t => t.M);
-            umapper.Add(f => f.C.ToString(), t => t.N);
-            umapper.Add(f => f.D, t => t.M);
+            umapper.Add(() => "hello there", t => t.N);
+            //umapper.Add(f => f.C.ToString(), t => t.N);
+            umapper.Add(f => f.C, t => t.O);
             umapper.Add(f => f.E, t => t.Q);
             umapper.CopyChanges(x, y);
 
-            Console.WriteLine($"Before changes: \nX:\n{x} \nY:\n{y}\n");
+            Console.WriteLine($"After changes: \nX:\n{x} \nY:\n{y}\n");
         }
     }
 }
