@@ -9,4 +9,4 @@ There are 3 such helpers.
 Automapper in .NET. Its slightly a bit complex to define mapping although pretty rich in features. The goal here was on the basic use cases.
 
 ## Notes
-The performance not be very impressive considering many things can be improved like caching of the compiled converters etc. But pretty usable and serves basic usecases easily.
+The performance may not be very impressive considering many things can be improved like caching of the compiled converters etc. But pretty usable and serves basic usecases easily.
