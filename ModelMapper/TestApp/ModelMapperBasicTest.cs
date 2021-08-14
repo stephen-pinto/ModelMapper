@@ -28,10 +28,11 @@ namespace TestApp
 
             Console.WriteLine($"Before changes: \nX:\n{x} \nY:\n{y}\n");
 
-            ModelMapperBasic<ModelOne, ModelTwo> umapper = new ModelMapperBasic<ModelOne, ModelTwo>();
+            ModelMapper<ModelOne, ModelTwo> umapper = new ModelMapper<ModelOne, ModelTwo>();
             umapper.Add(f => f.A, t => t.M);
             //umapper.Add(f => "hello there", t => t.N);
-            umapper.Add(f => f.C.ToString(), t => t.N);
+            umapper.Add(() => "hello there", t => t.N);
+            //umapper.Add(f => f.C.ToString(), t => t.N);
             umapper.Add(f => f.C, t => t.O);
             umapper.Add(f => f.E, t => t.Q);
             umapper.CopyChanges(x, y);

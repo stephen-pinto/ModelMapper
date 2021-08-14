@@ -19,70 +19,29 @@ namespace ModelMapper
             _defaults = new Dictionary<string, object>();
         }
 
-        public ModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType>> expr2)
+        public ModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
         {
-            AddMappingByExpression(expr1, expr2);
+            string targetMember = GetMemberName(expr2);
+            if (expr1.Body is MethodCallExpression || expr1.Body is ConstantExpression)
+                AddMappingByMethodExpression(targetMember, expr1);
+            else
+                AddMappingByExpression(targetMember, expr1);
             return this;
         }
 
         public ModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, object defaultValue = null)
         {
-            string targetMember;
+            string targetMember = GetMemberName(expr2);
 
             if (expr1.Body is MethodCallExpression || expr1.Body is ConstantExpression)
-                targetMember = AddMappingByMethodExpression(expr1, expr2);
+                AddMappingByMethodExpression(targetMember, expr1);
             else
-                targetMember = AddMappingByExpression(expr1, expr2);
-            
+                AddMappingByExpression(targetMember, expr1);
+
             if (defaultValue != null)
                 _defaults.Add(targetMember, defaultValue);
 
             return this;
-        }
-
-        private string AddMappingByMethodExpression<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
-        {
-            var targetExpr = (MemberExpression)((expr2.Body is MemberExpression) ? expr2.Body : ((UnaryExpression)expr2.Body).Operand);
-            var targetMember = targetExpr.Member.Name;
-
-            //Add null just for entry
-            _memberMapping.Add(targetMember, null);
-
-            //Since we allow only one param type explicit indexing should be fine
-            var lamdaExprn = Expression.Lambda<Func<SrcType, object>>(expr1.Body, expr1.Parameters[0]);
-            var lamdaFunc = lamdaExprn.Compile();
-
-            //Add the new function to the list
-            _methodMapping.Add(targetMember, lamdaFunc);
-
-            return targetMember;
-        }
-
-        private string AddMappingByExpression<T1, T2>(Expression<T1> sourceExpression, Expression<T2> targetExpression)
-        {
-            var targetExpr = (MemberExpression)((targetExpression.Body is MemberExpression) ? targetExpression.Body : ((UnaryExpression)targetExpression.Body).Operand);
-            var targetMember = targetExpr.Member.Name;
-
-            if (sourceExpression.Body is MemberExpression membrExpr)
-            {
-                _memberMapping.Add(targetMember, membrExpr.Member.Name);
-            }
-            else if (sourceExpression.Body is UnaryExpression unaryExpr)
-            {
-                _memberMapping.Add(targetMember, ((MemberExpression)unaryExpr.Operand).Member.Name);
-            }
-            //else if (sourceExpression.Body is ConstantExpression)
-            //{
-            //    var delgt = Expression.Lambda(sourceExpression.Body).Compile();
-            //    _memberMapping.Add(targetMember, null);
-            //    _delegateMapping.Add(targetMember, delgt);
-            //}
-            else
-            {
-                throw new NotSupportedException($"Expression of type {sourceExpression.Type.Name} not supported yet");
-            }
-
-            return targetMember;
         }
 
         public void Clear()
@@ -125,6 +84,60 @@ namespace ModelMapper
             DstType dstObj = Activator.CreateInstance<DstType>();
             CopyChanges(srcObj, dstObj);
             return dstObj;
+        }
+
+        private void AddMappingByExpression<T1>(string targetMemberName, Expression<T1> sourceExpression)
+        {
+            if (sourceExpression.Body is MemberExpression membrExpr)
+            {
+                _memberMapping.Add(targetMemberName, membrExpr.Member.Name);
+            }
+            else if (sourceExpression.Body is UnaryExpression unaryExpr)
+            {
+                _memberMapping.Add(targetMemberName, ((MemberExpression)unaryExpr.Operand).Member.Name);
+            }
+            //else if (sourceExpression.Body is ConstantExpression)
+            //{
+            //    var delgt = Expression.Lambda(sourceExpression.Body).Compile();
+            //    _memberMapping.Add(targetMember, null);
+            //    _delegateMapping.Add(targetMember, delgt);
+            //}
+            else
+            {
+                throw new NotSupportedException($"Expression of type {sourceExpression.Type.Name} not supported yet");
+            }
+        }
+
+        private void AddMappingByMethodExpression<ResType>(string targetMemberName, Expression<Func<SrcType, ResType>> source)
+        {
+            //Add null just for entry
+            _memberMapping.Add(targetMemberName, null);
+
+            //Since we allow only one param type explicit indexing should be fine
+            var lamdaExprn = Expression.Lambda<Func<SrcType, object>>(source.Body, source.Parameters[0]);
+            var lamdaFunc = lamdaExprn.Compile();
+
+            //Add the new function to the list
+            _methodMapping.Add(targetMemberName, lamdaFunc);
+        }
+
+        private void AddMappingByMethodExpression<ResType>(string targetMemberName, Expression<Func<ResType>> source)
+        {
+            //Add null just for entry
+            _memberMapping.Add(targetMemberName, null);
+
+            var param = Expression.Parameter(typeof(SrcType));
+            var lamdaExprn = Expression.Lambda<Func<SrcType, object>>(source.Body, param);
+            var lamdaFunc = lamdaExprn.Compile();
+
+            //Add the new function to the list
+            _methodMapping.Add(targetMemberName, lamdaFunc);
+        }
+
+        private string GetMemberName<T>(Expression<T> exprn)
+        {
+            var targetExpr = (MemberExpression)((exprn.Body is MemberExpression) ? exprn.Body : ((UnaryExpression)exprn.Body).Operand);
+            return targetExpr.Member.Name;
         }
 
         private Func<object, object> Convert<T1, T2>(Func<T1, T2> func)
