@@ -9,13 +9,13 @@ namespace ModelMapper
         where DstType : class
     {
         private Dictionary<string, string> _memberMapping;
-        private Dictionary<string, Func<SrcType, object>> _methodMapping;
+        private Dictionary<string, Func<SrcType, object>> _delegateMapping;
         private Dictionary<string, object> _defaults;
 
         public ModelMapper()
         {
             _memberMapping = new Dictionary<string, string>();
-            _methodMapping = new Dictionary<string, Func<SrcType, object>>();
+            _delegateMapping = new Dictionary<string, Func<SrcType, object>>();
             _defaults = new Dictionary<string, object>();
         }
 
@@ -74,7 +74,7 @@ namespace ModelMapper
                 }
                 else
                 {
-                    prop2.SetValue(destinationObj, _methodMapping[kvp.Key].Invoke(sourceObj));
+                    prop2.SetValue(destinationObj, _delegateMapping[kvp.Key].Invoke(sourceObj));
                 }
             }
         }
@@ -118,7 +118,7 @@ namespace ModelMapper
             var lamdaFunc = lamdaExprn.Compile();
 
             //Add the new function to the list
-            _methodMapping.Add(targetMemberName, lamdaFunc);
+            _delegateMapping.Add(targetMemberName, lamdaFunc);
         }
 
         private void AddMappingByMethodExpression<ResType>(string targetMemberName, Expression<Func<ResType>> source)
@@ -131,12 +131,12 @@ namespace ModelMapper
             var lamdaFunc = lamdaExprn.Compile();
 
             //Add the new function to the list
-            _methodMapping.Add(targetMemberName, lamdaFunc);
+            _delegateMapping.Add(targetMemberName, lamdaFunc);
         }
 
-        private string GetMemberName<T>(Expression<T> exprn)
+        private string GetMemberName<T>(Expression<T> expression)
         {
-            var targetExpr = (MemberExpression)((exprn.Body is MemberExpression) ? exprn.Body : ((UnaryExpression)exprn.Body).Operand);
+            var targetExpr = (MemberExpression)((expression.Body is MemberExpression) ? expression.Body : ((UnaryExpression)expression.Body).Operand);
             return targetExpr.Member.Name;
         }
 
