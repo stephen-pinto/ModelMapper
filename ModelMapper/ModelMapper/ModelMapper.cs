@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 
 namespace ModelMapper
 {
-    public class ModelMapperBasic<SrcType, DstType>
+    public class ModelMapper<SrcType, DstType>
         where SrcType : class
         where DstType : class
     {
@@ -12,20 +12,20 @@ namespace ModelMapper
         private Dictionary<string, Func<SrcType, object>> _methodMapping;
         private Dictionary<string, object> _defaults;
 
-        public ModelMapperBasic()
+        public ModelMapper()
         {
             _memberMapping = new Dictionary<string, string>();
             _methodMapping = new Dictionary<string, Func<SrcType, object>>();
             _defaults = new Dictionary<string, object>();
         }
 
-        public ModelMapperBasic<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType>> expr2)
+        public ModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType>> expr2)
         {
             AddMappingByExpression(expr1, expr2);
             return this;
         }
 
-        public ModelMapperBasic<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, object defaultValue = null)
+        public ModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, object defaultValue = null)
         {
             string targetMember;
 
