@@ -9,7 +9,6 @@ namespace ModelMapper
         where DstType : class
     {
         private Dictionary<string, string> _memberMapping;
-        private Dictionary<string, Delegate> _delegateMapping;
         private Dictionary<string, Func<SrcType, object>> _methodMapping;
         private Dictionary<string, object> _defaults;
 
@@ -17,7 +16,6 @@ namespace ModelMapper
         {
             _memberMapping = new Dictionary<string, string>();
             _methodMapping = new Dictionary<string, Func<SrcType, object>>();
-            _delegateMapping = new Dictionary<string, Delegate>();
             _defaults = new Dictionary<string, object>();
         }
 
@@ -117,13 +115,6 @@ namespace ModelMapper
                 }
                 else
                 {
-                    //if (_methodMapping.ContainsKey(kvp.Key))
-                    //{
-                    //    _methodMapping[kvp.Key].Invoke(sourceObj);
-                    //}
-
-                    //If its not a simple member maybe its a delegate so execute it
-                    //prop2.SetValue(destinationObj, _delegateMapping[kvp.Key].DynamicInvoke());
                     prop2.SetValue(destinationObj, _methodMapping[kvp.Key].Invoke(sourceObj));
                 }
             }

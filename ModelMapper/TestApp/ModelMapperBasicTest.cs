@@ -30,8 +30,8 @@ namespace TestApp
 
             ModelMapperBasic<ModelOne, ModelTwo> umapper = new ModelMapperBasic<ModelOne, ModelTwo>();
             umapper.Add(f => f.A, t => t.M);
-            umapper.Add(f => "hello there", t => t.N);
-            //umapper.Add(f => f.C.ToString(), t => t.N);
+            //umapper.Add(f => "hello there", t => t.N);
+            umapper.Add(f => f.C.ToString(), t => t.N);
             umapper.Add(f => f.C, t => t.O);
             umapper.Add(f => f.E, t => t.Q);
             umapper.CopyChanges(x, y);
