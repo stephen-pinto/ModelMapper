@@ -4,44 +4,63 @@ using System.Linq.Expressions;
 
 namespace ModelMapper
 {
-    public class ModelMapperBasic<T1, T2>
-        where T1 : class
-        where T2 : class
+    public class ModelMapperBasic<SrcType, DstType>
+        where SrcType : class
+        where DstType : class
     {
         private Dictionary<string, string> _memberMapping;
         private Dictionary<string, Delegate> _delegateMapping;
+        private Dictionary<string, Func<SrcType, object>> _methodMapping;
         private Dictionary<string, object> _defaults;
 
         public ModelMapperBasic()
         {
             _memberMapping = new Dictionary<string, string>();
+            _methodMapping = new Dictionary<string, Func<SrcType, object>>();
             _delegateMapping = new Dictionary<string, Delegate>();
-            _defaults = new Dictionary<string, object>();            
+            _defaults = new Dictionary<string, object>();
         }
 
-        public ModelMapperBasic<T1, T2> Add<Type>(Expression<Func<Type>> expr1, Expression<Func<T2, Type>> expr2)
+        public ModelMapperBasic<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType>> expr2)
         {
             AddMappingByExpression(expr1, expr2);
             return this;
         }
 
-        public ModelMapperBasic<T1, T2> Add<Type>(Expression<Func<T1, Type>> expr1, Expression<Func<T2, Type>> expr2)
+        public ModelMapperBasic<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, object defaultValue = null)
         {
-            Add(expr1, expr2, null);
-            return this;
-        }
+            string targetMember;
 
-        public ModelMapperBasic<T1, T2> Add<Type>(Expression<Func<T1, Type>> expr1, Expression<Func<T2, Type>> expr2, object defaultValue = null)
-        {
-            var targetMember = AddMappingByExpression(expr1, expr2);
-
+            if (expr1.Body is MethodCallExpression || expr1.Body is ConstantExpression)
+                targetMember = AddMappingByMethodExpression(expr1, expr2);
+            else
+                targetMember = AddMappingByExpression(expr1, expr2);
+            
             if (defaultValue != null)
                 _defaults.Add(targetMember, defaultValue);
 
             return this;
         }
 
-        private string AddMappingByExpression<Type1, Type2>(Expression<Type1> sourceExpression, Expression<Type2> targetExpression)
+        private string AddMappingByMethodExpression<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
+        {
+            var targetExpr = (MemberExpression)((expr2.Body is MemberExpression) ? expr2.Body : ((UnaryExpression)expr2.Body).Operand);
+            var targetMember = targetExpr.Member.Name;
+
+            //Add null just for entry
+            _memberMapping.Add(targetMember, null);
+
+            //Since we allow only one param type explicit indexing should be fine
+            var lamdaExprn = Expression.Lambda<Func<SrcType, object>>(expr1.Body, expr1.Parameters[0]);
+            var lamdaFunc = lamdaExprn.Compile();
+
+            //Add the new function to the list
+            _methodMapping.Add(targetMember, lamdaFunc);
+
+            return targetMember;
+        }
+
+        private string AddMappingByExpression<T1, T2>(Expression<T1> sourceExpression, Expression<T2> targetExpression)
         {
             var targetExpr = (MemberExpression)((targetExpression.Body is MemberExpression) ? targetExpression.Body : ((UnaryExpression)targetExpression.Body).Operand);
             var targetMember = targetExpr.Member.Name;
@@ -53,16 +72,16 @@ namespace ModelMapper
             else if (sourceExpression.Body is UnaryExpression unaryExpr)
             {
                 _memberMapping.Add(targetMember, ((MemberExpression)unaryExpr.Operand).Member.Name);
-            }           
-            else if (sourceExpression.Body is MethodCallExpression || sourceExpression.Body is ConstantExpression)
-            {
-                var delgt = Expression.Lambda(sourceExpression.Body).Compile();
-                _memberMapping.Add(targetMember, null);
-                _delegateMapping.Add(targetMember, delgt);
             }
+            //else if (sourceExpression.Body is ConstantExpression)
+            //{
+            //    var delgt = Expression.Lambda(sourceExpression.Body).Compile();
+            //    _memberMapping.Add(targetMember, null);
+            //    _delegateMapping.Add(targetMember, delgt);
+            //}
             else
             {
-                throw new NotSupportedException($"{nameof(Type1)} not supported yet");
+                throw new NotSupportedException($"Expression of type {sourceExpression.Type.Name} not supported yet");
             }
 
             return targetMember;
@@ -74,7 +93,7 @@ namespace ModelMapper
             _defaults.Clear();
         }
 
-        public void CopyChanges(T1 sourceObj, T2 destinationObj, bool useDefaultIfNull = true)
+        public void CopyChanges(SrcType sourceObj, DstType destinationObj, bool useDefaultIfNull = true)
         {
             foreach (var kvp in _memberMapping)
             {
@@ -98,17 +117,28 @@ namespace ModelMapper
                 }
                 else
                 {
+                    //if (_methodMapping.ContainsKey(kvp.Key))
+                    //{
+                    //    _methodMapping[kvp.Key].Invoke(sourceObj);
+                    //}
+
                     //If its not a simple member maybe its a delegate so execute it
-                    prop2.SetValue(destinationObj, _delegateMapping[kvp.Key].DynamicInvoke());                    
+                    //prop2.SetValue(destinationObj, _delegateMapping[kvp.Key].DynamicInvoke());
+                    prop2.SetValue(destinationObj, _methodMapping[kvp.Key].Invoke(sourceObj));
                 }
             }
         }
 
-        public T2 GetNew(T1 srcObj)
+        public DstType GetNew(SrcType srcObj)
         {
-            T2 dstObj = Activator.CreateInstance<T2>();
+            DstType dstObj = Activator.CreateInstance<DstType>();
             CopyChanges(srcObj, dstObj);
             return dstObj;
+        }
+
+        private Func<object, object> Convert<T1, T2>(Func<T1, T2> func)
+        {
+            return p => func((T1)p);
         }
     }
 }
