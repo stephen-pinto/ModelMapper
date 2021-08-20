@@ -23,7 +23,7 @@ namespace ModelMapper
             dstInstance = Expression.Parameter(typeof(DstType), "dstObj");
         }
 
-        public ModelMapperNext<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, object defaultValue = null)
+        public ModelMapperNext<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
         {
             if (ConverterFunction != null)
                 ConverterFunction = null;
@@ -34,6 +34,38 @@ namespace ModelMapper
             var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
 
             assignmentExpressions.Add(Expression.Assign(leftProp, rightProp));
+
+            return this;
+        }
+
+        public ModelMapperNext<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
+        {
+            if (ConverterFunction != null)
+                ConverterFunction = null;
+
+            string targetMember = GetMemberName(expr2);
+
+            var leftProp = Expression.Property(dstInstance, targetMember);
+            var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
+
+            assignmentExpressions.Add(Expression.Assign(leftProp, rightProp));
+
+            return this;
+        }
+
+        public ModelMapperNext<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, ResType defaultValue)
+            where ResType : class
+        {
+            if (ConverterFunction != null)
+                ConverterFunction = null;
+
+            string targetMember = GetMemberName(expr2);
+
+            var leftProp = Expression.Property(dstInstance, targetMember);
+            var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
+            var rightPropDefault = Expression.Constant(defaultValue);
+
+            assignmentExpressions.Add(Expression.Assign(leftProp, Expression.Coalesce(rightProp, rightPropDefault)));
 
             return this;
         }
@@ -89,6 +121,14 @@ namespace ModelMapper
                 var invokeExpr = Expression.Invoke(lamdaExprn, new Expression[] { srcInstance });
                 return Expression.Convert(invokeExpr, resultType);
             }
+        }
+
+        private Expression GetAppropriateExpression<ResType>(Expression<Func<ResType>> sourceExpression, Type resultType)
+        {
+            var param = Expression.Parameter(typeof(SrcType));
+            var lamdaExprn = Expression.Lambda<Func<SrcType, object>>(sourceExpression.Body, param);
+            var invokeExpr = Expression.Invoke(lamdaExprn, new Expression[] { srcInstance });
+            return Expression.Convert(invokeExpr, resultType);
         }
 
         private string GetMemberName<T>(Expression<T> expression)
