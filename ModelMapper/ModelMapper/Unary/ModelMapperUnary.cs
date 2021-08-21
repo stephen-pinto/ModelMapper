@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ModelMapper
+namespace ModelMapper.Unary
 {
     public class ModelMapperUnary<T> : HashSet<string>
         where T : class

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace ModelMapper
+namespace ModelMapper.Twoway
 {
     public class ModelMapperBiDir<T1, T2> : Dictionary<string, string>
         where T1 : class

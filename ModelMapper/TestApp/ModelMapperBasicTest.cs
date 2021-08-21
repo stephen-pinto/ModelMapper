@@ -1,4 +1,5 @@
 ﻿using ModelMapper;
+using ModelMapper.Basic;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -38,7 +39,7 @@ namespace TestApp
             Console.WriteLine($"Before changes: \nX:\n{x} \nY:\n{y}\n");
             stopwatch.Start();
 
-            ModelMapper<ModelOne, ModelTwo> umapper = new ModelMapper<ModelOne, ModelTwo>();
+            IModelMapper<ModelOne, ModelTwo> umapper = ModelMapperFactory.GetModelMapper<ModelOne, ModelTwo>(ModelDataSize.Small);
 
             umapper.Add(f => f.A, t => t.M);
             //umapper.Add(f => "hello there", t => t.N);
@@ -47,6 +48,7 @@ namespace TestApp
             umapper.Add(f => f.C, t => t.O);
             umapper.Add(f => f.D, t => t.P);
             umapper.Add(f => f.E, t => t.Q);
+            umapper.Build();
 
             for (int i = 0; i < 7000; i++)
                 umapper.CopyChanges(x, y);
@@ -76,7 +78,7 @@ namespace TestApp
             Console.WriteLine($"Before changes: \nX:\n{x} \nY:\n{y}\n");
             stopwatch.Start();
 
-            ModelMapperNext<ModelOne, ModelTwo> umapper = new ModelMapperNext<ModelOne, ModelTwo>();
+            IModelMapper<ModelOne, ModelTwo> umapper = ModelMapperFactory.GetModelMapper<ModelOne, ModelTwo>(ModelDataSize.Large);
 
             umapper.Add(f => f.A, t => t.M)
                 .Add(f => "Hello there", t => t.N)
