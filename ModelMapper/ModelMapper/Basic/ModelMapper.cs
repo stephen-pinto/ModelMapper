@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
 
-namespace ModelMapper
+namespace ModelMapper.Basic
 {
-    public class ModelMapperNext<SrcType, DstType>
+    public class ModelMapper<SrcType, DstType> : IModelMapper<SrcType, DstType>
         where SrcType : class
         where DstType : class
     {
@@ -12,9 +13,10 @@ namespace ModelMapper
         private List<Expression> assignmentExpressions = new List<Expression>();
         private ParameterExpression srcInstance = null;
         private ParameterExpression dstInstance = null;
-        private Action<SrcType, DstType> ConverterFunction { get; set; }
 
-        public ModelMapperNext()
+        private Action<SrcType, DstType> CopyFuction { get; set; }
+
+        public ModelMapper()
         {
             defaults = new Dictionary<string, object>();
 
@@ -23,10 +25,10 @@ namespace ModelMapper
             dstInstance = Expression.Parameter(typeof(DstType), "dstObj");
         }
 
-        public ModelMapperNext<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
         {
-            if (ConverterFunction != null)
-                ConverterFunction = null;
+            if (CopyFuction != null)
+                CopyFuction = null;
 
             string targetMember = GetMemberName(expr2);
 
@@ -38,10 +40,10 @@ namespace ModelMapper
             return this;
         }
 
-        public ModelMapperNext<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
         {
-            if (ConverterFunction != null)
-                ConverterFunction = null;
+            if (CopyFuction != null)
+                CopyFuction = null;
 
             string targetMember = GetMemberName(expr2);
 
@@ -53,11 +55,11 @@ namespace ModelMapper
             return this;
         }
 
-        public ModelMapperNext<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, ResType defaultValue)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2, ResType defaultValue)
             where ResType : class
         {
-            if (ConverterFunction != null)
-                ConverterFunction = null;
+            if (CopyFuction != null)
+                CopyFuction = null;
 
             string targetMember = GetMemberName(expr2);
 
@@ -70,11 +72,31 @@ namespace ModelMapper
             return this;
         }
 
-        public ModelMapperNext<SrcType, DstType> Build()
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, ResType defaultValue)
+            where ResType : class
         {
+            if (CopyFuction != null)
+                CopyFuction = null;
+
+            string targetMember = GetMemberName(expr2);
+
+            var leftProp = Expression.Property(dstInstance, targetMember);
+            var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
+            var rightPropDefault = Expression.Constant(defaultValue);
+
+            assignmentExpressions.Add(Expression.Assign(leftProp, Expression.Coalesce(rightProp, rightPropDefault)));
+
+            return this;
+        }
+
+        public IModelMapper<SrcType, DstType> Build()
+        {
+            if (!assignmentExpressions.Any())
+                throw new ArgumentException("No mapping provided for building");
+
             var block = Expression.Block(assignmentExpressions.ToArray());
             var lamda = Expression.Lambda<Action<SrcType, DstType>>(block, new ParameterExpression[] { srcInstance, dstInstance });
-            ConverterFunction = lamda.Compile();
+            CopyFuction = lamda.Compile();
             return this;
         }
 
@@ -86,10 +108,11 @@ namespace ModelMapper
 
         public void CopyChanges(SrcType sourceObj, DstType destinationObj)
         {
-            if (ConverterFunction == null)
+            if (CopyFuction == null)
                 throw new InvalidOperationException("Build not called");
 
-            ConverterFunction(sourceObj, destinationObj);
+            //Invoke the compile function
+            CopyFuction(sourceObj, destinationObj);
         }
 
         public DstType GetNew(SrcType srcObj)
