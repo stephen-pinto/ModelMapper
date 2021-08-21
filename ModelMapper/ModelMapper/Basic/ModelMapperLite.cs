@@ -77,7 +77,7 @@ namespace ModelMapper.Basic
 
         public IModelMapper<SrcType, DstType> Build()
         {
-            if (!_memberMapping.Any() || !_delegateMapping.Any())
+            if (!_memberMapping.Any() && !_delegateMapping.Any())
                 throw new ArgumentException("No mapping provided for building");
 
             //Since this is just to achieve a common abstraction return simply

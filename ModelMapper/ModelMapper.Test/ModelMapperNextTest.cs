@@ -1,10 +1,5 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using ModelMapper.Test.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ModelMapper.Test
 {
@@ -12,13 +7,13 @@ namespace ModelMapper.Test
     public class ModelMapperNextTest
     {
         [TestMethod]
-        public void SimpleMappingTest()
+        public void SmallDataMapperTest()
         {
             var dflt = new Person() { Age = 0, Name = "None" };
             Employee employee1 = new Employee() { Id = 1231, CompanyName = "X company", Person = new Person() { Age = 20, Name = "SomenameA" } };
             Employee employee2 = new Employee() { Id = 3344, CompanyName = "Z company", Person = new Person() { Age = 26, Name = "SomenameA" } };
 
-            var modelMapper = new ModelMapperNext<Employee, Employee>();
+            var modelMapper = ModelMapperFactory.GetModelMapper<Employee, Employee>(ModelDataSize.Small);
             modelMapper.Add(o => o.Id, o => o.Id)
                 .Add(o => o.Person, o => o.Person, dflt)
                 .Add(o => o.CompanyName, o => o.CompanyName)
@@ -26,7 +21,25 @@ namespace ModelMapper.Test
 
             modelMapper.CopyChanges(employee1, employee2);
             Assert.AreEqual(employee1.CompanyName, employee2.CompanyName);
-            Assert.AreEqual(employee1.Id, employee2.Id);            
+            Assert.AreEqual(employee1.Id, employee2.Id);
+        }
+
+        [TestMethod]
+        public void LargeDataMapperTest()
+        {
+            var dflt = new Person() { Age = 0, Name = "None" };
+            Employee employee1 = new Employee() { Id = 1231, CompanyName = "X company", Person = new Person() { Age = 20, Name = "SomenameA" } };
+            Employee employee2 = new Employee() { Id = 3344, CompanyName = "Z company", Person = new Person() { Age = 26, Name = "SomenameA" } };
+
+            var modelMapper = ModelMapperFactory.GetModelMapper<Employee, Employee>(ModelDataSize.Large);
+            modelMapper.Add(o => o.Id, o => o.Id)
+                .Add(o => o.Person, o => o.Person, dflt)
+                .Add(o => o.CompanyName, o => o.CompanyName)
+                .Build();
+
+            modelMapper.CopyChanges(employee1, employee2);
+            Assert.AreEqual(employee1.CompanyName, employee2.CompanyName);
+            Assert.AreEqual(employee1.Id, employee2.Id);
         }
 
         [TestMethod]
@@ -34,10 +47,10 @@ namespace ModelMapper.Test
         {
             var dflt = new Person() { Age = 0, Name = "None" };
             Employee employee = new Employee() { Id = 1231, CompanyName = "X company", Person = new Person() { Age = 20, Name = "SomenameA" } };
-            Employee employee2 = new Employee() { Id = 2121, CompanyName = "Y company", Person = null};
+            Employee employee2 = new Employee() { Id = 2121, CompanyName = "Y company", Person = null };
             Employee employee3 = new Employee() { Id = 3344, CompanyName = "Z company", Person = new Person() { Age = 26, Name = "SomenameA" } };
 
-            var modelMapper = new ModelMapperNext<Employee, Employee>();
+            var modelMapper = ModelMapperFactory.GetModelMapper<Employee, Employee>();
             modelMapper.Add(o => o.Id, o => o.Id)
                 .Add(o => o.Person, o => o.Person, dflt)
                 .Add(o => o.CompanyName, o => o.CompanyName)

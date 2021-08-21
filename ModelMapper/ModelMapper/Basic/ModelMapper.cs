@@ -9,7 +9,7 @@ namespace ModelMapper.Basic
         where SrcType : class
         where DstType : class
     {
-        private Dictionary<string, object> defaults;
+        private List<string> destMemberUniqueNames = new List<string>();
         private List<Expression> assignmentExpressions = new List<Expression>();
         private ParameterExpression srcInstance = null;
         private ParameterExpression dstInstance = null;
@@ -18,53 +18,42 @@ namespace ModelMapper.Basic
 
         public ModelMapper()
         {
-            defaults = new Dictionary<string, object>();
+            destMemberUniqueNames = new List<string>();
+            assignmentExpressions = new List<Expression>();
 
             //Declare parameters for the converter
             srcInstance = Expression.Parameter(typeof(SrcType), "srcObj");
             dstInstance = Expression.Parameter(typeof(DstType), "dstObj");
         }
 
-        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> source, Expression<Func<DstType, ResType>> destination)
         {
-            if (CopyFuction != null)
-                CopyFuction = null;
+            var (targetMember, leftProp) = ValidateTargetBeforeAdding(destination);
 
-            string targetMember = GetMemberName(expr2);
-
-            var leftProp = Expression.Property(dstInstance, targetMember);
-            var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
+            var rightProp = GetAppropriateExpression(source, typeof(ResType));
 
             assignmentExpressions.Add(Expression.Assign(leftProp, rightProp));
 
             return this;
         }
 
-        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> source, Expression<Func<DstType, ResType>> destination)
         {
-            if (CopyFuction != null)
-                CopyFuction = null;
+            var (targetMember, leftProp) = ValidateTargetBeforeAdding(destination);
 
-            string targetMember = GetMemberName(expr2);
-
-            var leftProp = Expression.Property(dstInstance, targetMember);
-            var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
+            var rightProp = GetAppropriateExpression(source, typeof(ResType));
 
             assignmentExpressions.Add(Expression.Assign(leftProp, rightProp));
 
             return this;
         }
 
-        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2, ResType defaultValue)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> source, Expression<Func<DstType, ResType>> destination, ResType defaultValue)
             where ResType : class
         {
-            if (CopyFuction != null)
-                CopyFuction = null;
+            var (targetMember, leftProp) = ValidateTargetBeforeAdding(destination);
 
-            string targetMember = GetMemberName(expr2);
-
-            var leftProp = Expression.Property(dstInstance, targetMember);
-            var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
+            var rightProp = GetAppropriateExpression(source, typeof(ResType));
             var rightPropDefault = Expression.Constant(defaultValue);
 
             assignmentExpressions.Add(Expression.Assign(leftProp, Expression.Coalesce(rightProp, rightPropDefault)));
@@ -72,16 +61,12 @@ namespace ModelMapper.Basic
             return this;
         }
 
-        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, ResType defaultValue)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> source, Expression<Func<DstType, ResType>> destination, ResType defaultValue)
             where ResType : class
         {
-            if (CopyFuction != null)
-                CopyFuction = null;
+            var (targetMember, leftProp) = ValidateTargetBeforeAdding(destination);
 
-            string targetMember = GetMemberName(expr2);
-
-            var leftProp = Expression.Property(dstInstance, targetMember);
-            var rightProp = GetAppropriateExpression(expr1, typeof(ResType));
+            var rightProp = GetAppropriateExpression(source, typeof(ResType));
             var rightPropDefault = Expression.Constant(defaultValue);
 
             assignmentExpressions.Add(Expression.Assign(leftProp, Expression.Coalesce(rightProp, rightPropDefault)));
@@ -103,7 +88,7 @@ namespace ModelMapper.Basic
         public void Clear()
         {
             assignmentExpressions.Clear();
-            defaults.Clear();
+            destMemberUniqueNames.Clear();
         }
 
         public void CopyChanges(SrcType sourceObj, DstType destinationObj)
@@ -152,6 +137,20 @@ namespace ModelMapper.Basic
             var lamdaExprn = Expression.Lambda<Func<SrcType, object>>(sourceExpression.Body, param);
             var invokeExpr = Expression.Invoke(lamdaExprn, new Expression[] { srcInstance });
             return Expression.Convert(invokeExpr, resultType);
+        }
+
+        private Tuple<string, MemberExpression> ValidateTargetBeforeAdding<ResType>(Expression<Func<DstType, ResType>> expr2)
+        {
+            string targetMember = GetMemberName(expr2);
+
+            if (destMemberUniqueNames.Contains(targetMember))
+                throw new InvalidOperationException("Cant contain multiple sources for one destination");
+
+            if (CopyFuction != null)
+                CopyFuction = null;
+
+            destMemberUniqueNames.Add(targetMember);
+            return Tuple.Create(targetMember, Expression.Property(dstInstance, targetMember));
         }
 
         private string GetMemberName<T>(Expression<T> expression)
