@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace ModelMapper
+namespace ModelMapper.Basic
 {
-    public class ModelMapper<SrcType, DstType>
+    public class ModelMapperLite<SrcType, DstType> : IModelMapper<SrcType, DstType>
         where SrcType : class
         where DstType : class
     {
@@ -12,35 +15,72 @@ namespace ModelMapper
         private Dictionary<string, Func<SrcType, object>> _delegateMapping;
         private Dictionary<string, object> _defaults;
 
-        public ModelMapper()
+        public ModelMapperLite()
         {
             _memberMapping = new Dictionary<string, string>();
             _delegateMapping = new Dictionary<string, Func<SrcType, object>>();
             _defaults = new Dictionary<string, object>();
         }
 
-        public ModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> expr1, Expression<Func<DstType, ResType>> expr2)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> source, Expression<Func<DstType, ResType>> destination)
         {
-            string targetMember = GetMemberName(expr2);
-            if (expr1.Body is MethodCallExpression || expr1.Body is ConstantExpression)
-                AddMappingByMethodExpression(targetMember, expr1);
+            string targetMember = GetMemberName(destination);
+            if (source.Body is MethodCallExpression || source.Body is ConstantExpression)
+                AddMappingByMethodExpression(targetMember, source);
             else
-                AddMappingByExpression(targetMember, expr1);
+                AddMappingByExpression(targetMember, source);
             return this;
         }
 
-        public ModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> expr1, Expression<Func<DstType, ResType>> expr2, object defaultValue = null)
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> source, Expression<Func<DstType, ResType>> destination)
         {
-            string targetMember = GetMemberName(expr2);
+            string targetMember = GetMemberName(destination);
 
-            if (expr1.Body is MethodCallExpression || expr1.Body is ConstantExpression)
-                AddMappingByMethodExpression(targetMember, expr1);
+            if (source.Body is MethodCallExpression || source.Body is ConstantExpression)
+                AddMappingByMethodExpression(targetMember, source);
             else
-                AddMappingByExpression(targetMember, expr1);
+                AddMappingByExpression(targetMember, source);
 
-            if (defaultValue != null)
+            return this;
+        }
+
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<ResType>> source, Expression<Func<DstType, ResType>> destination, ResType defaultValue)
+            where ResType : class
+        {
+            string targetMember = GetMemberName(destination);
+            if (source.Body is MethodCallExpression || source.Body is ConstantExpression)
+                AddMappingByMethodExpression(targetMember, source);
+            else
+                AddMappingByExpression(targetMember, source);
+
+            if(defaultValue != null)
                 _defaults.Add(targetMember, defaultValue);
 
+            return this;
+        }
+
+        public IModelMapper<SrcType, DstType> Add<ResType>(Expression<Func<SrcType, ResType>> source, Expression<Func<DstType, ResType>> destination, ResType defaultValue)
+            where ResType : class
+        {
+            string targetMember = GetMemberName(destination);
+
+            if (source.Body is MethodCallExpression || source.Body is ConstantExpression)
+                AddMappingByMethodExpression(targetMember, source);
+            else
+                AddMappingByExpression(targetMember, source);
+
+            if(defaultValue != null)
+                _defaults.Add(targetMember, defaultValue);
+
+            return this;
+        }
+
+        public IModelMapper<SrcType, DstType> Build()
+        {
+            if (!_memberMapping.Any() && !_delegateMapping.Any())
+                throw new ArgumentException("No mapping provided for building");
+
+            //Since this is just to achieve a common abstraction return simply
             return this;
         }
 
@@ -50,7 +90,7 @@ namespace ModelMapper
             _defaults.Clear();
         }
 
-        public void CopyChanges(SrcType sourceObj, DstType destinationObj, bool useDefaultIfNull = true)
+        public void CopyChanges(SrcType sourceObj, DstType destinationObj)
         {
             foreach (var kvp in _memberMapping)
             {
@@ -62,7 +102,7 @@ namespace ModelMapper
 
                     if (prop1.GetValue(sourceObj) != prop2.GetValue(destinationObj))
                     {
-                        if (useDefaultIfNull && prop1.GetValue(sourceObj) == null && _defaults.ContainsKey(prop1.Name))
+                        if (prop1.GetValue(sourceObj) == null && _defaults.ContainsKey(prop1.Name))
                         {
                             prop2.SetValue(destinationObj, _defaults[prop1.Name]);
                         }
@@ -143,6 +183,6 @@ namespace ModelMapper
         private Func<object, object> Convert<T1, T2>(Func<T1, T2> func)
         {
             return p => func((T1)p);
-        }
+        }        
     }
 }
