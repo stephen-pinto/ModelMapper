@@ -8,7 +8,7 @@ There are 3 such helpers.
 
 ## Performance and uses
 1. **ModelMapper** should serve general use cases and performs much better for mapping above 7000 objects with average amount of properties to map than the lite version.
-2. **ModelMapper** should similar purposes as its **ModelMapper** counter-part and specifically mapping below 7000 objects based on similar parameters as mentioned above. But above this number the performance impacts are considerable.
+2. **ModelMapper** should serve similar purposes as its **ModelMapper** counter-part and specifically mapping below 7000 objects based on similar parameters as mentioned above. But above this number the performance impacts are considerable.
 3. **ModelMapperBiDir** is a bidirectional mapper used to map two objects of different types from first to second as well as second to first without having to define the mapping separately. For now it still works on reflection so larger data sets could face performance impact.
 4. **ModelMapperUnary** is for a single type and does not need to have mapping specified between members can can be used for cloning an object.
 
